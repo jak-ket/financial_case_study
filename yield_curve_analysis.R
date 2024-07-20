@@ -127,6 +127,7 @@ plot_yield_curves <- function(region){
 }
 plot_yield_curves("Euro")
 plot_yield_curves("United.States")
+plot_yield_curves("China")
 
 # Compute and visualise the correlation between US/Euro/UK/China rates focusing only on 2/5/10/20/30y tenor points
 
@@ -171,3 +172,53 @@ ggplot(df_cors, aes(x=Tenor, y=Correlation, color=as.factor(Region.Pair))) +
        color = "Region Pair") +
   theme_minimal() +
   theme(legend.position = "bottom")
+
+# Compute and visualise 2 year-10 year and 2 year-30 year slope for US and Euro rates
+
+# slope computation 
+df_slopes <- data.frame()
+
+get_region_tenor_df_slope <- function(region, tenor.start, tenor.end){
+  rfr_start <- df[df$Tenor==tenor.start, region]
+  rfr_end <- df[df$Tenor==tenor.end, region]
+  tenor.diff <- tenor.end - tenor.start
+  rfr_slopes <- (rfr_end - rfr_start) / tenor.diff
+  dates <- unique(df$Date)
+  region_tenor_df_slope <- data.frame(
+    Region=rep(region, length(dates)),
+    Tenor.Pair=rep(paste0(tenor.start, "y", "-", tenor.end, "y"), length(dates)),
+    Date=dates,
+    RFR.Slope=rfr_slopes
+  )
+  return(region_tenor_df_slope) 
+}
+regions <- c("Euro", "United.States")
+for(region in c("Euro", "United.States")){
+  for (tenor.pair in list(c(2,10), c(2,30))){
+    region_tenor_df_slope <- get_region_tenor_df_slope(
+      region, tenor.pair[1], tenor.pair[2]
+    )
+    df_slopes <- rbind(df_slopes, region_tenor_df_slope)
+  }
+}
+stopifnot(dim(df_slopes)[1] == length(unique(df$Date))*2*2)
+df_slopes
+
+# slope plotting
+ggplot(get_slopes(), aes(x=dose, y=len)) + 
+  geom_boxplot(outlier.colour="black", outlier.shape=16,
+             outlier.size=2, notch=FALSE)
+
+plot_rfr_slope <- function(region){
+  ggplot(df_slopes[df_slopes$Region==region,], aes(x=Date, y=RFR.Slope, color=as.factor(Tenor.Pair))) + 
+    geom_line(aes(color = as.factor(Tenor.Pair)), size = 1) + 
+    scale_color_viridis_d() +
+    labs(title = paste(region, "RFR Slopes"),
+         color = "Tenor.Pair") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+}
+
+plot_rfr_slope("Euro")
+plot_rfr_slope("United.States")
+
