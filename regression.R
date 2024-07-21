@@ -105,32 +105,57 @@ bptest(fit) # p-value < 2.2e-16
 # Compute historical simulation VaR (qtl: 99%, holding: 1month, lookback: 10y) for a portfolio 
 # with 10y Zero Coupon (ZC) bond and 5y ZC bond (each with a face: USD 1m). 
 # Also, compute the contribution to total VaR of each bond
-df.yields <- df[,c("DATE", "DGS5", "DGS10")]
 
 # compute bond prices
 face.val <- 1e6 # face value
 df$P5 <- face.val / (1+df$DGS5/100)^5
 df$P10 <- face.val / (1+df$DGS10/100)^10
 
+# compute portfolio weights
+# a -> a(1+y_a)
+# b -> b(1+y_b)
+# a+b -> a(1+y_a) + b(1+y_b) # (P1-P0)/P0
+# (a(1+y_a) + b(1+y_b) - (a+b)) / (a+b) = (ay_a + by_b)/(a+b) == a*y_b/(a+b) + b*y_a(a+b)
+df$Weight.P5 <- df$P5 / (df$P5 + df$P10)
+df$Weight.P10 <- df$P10 / (df$P5 + df$P10)
+
+head(df)
+
 # plot bond prices
 df.melt <- melt(df, id="DATE", measure.vars=c("P5", "P10"), variable.name="BOND", value.name="PRICE")
 ggplot(df.melt, aes(x=DATE, y=PRICE, color=BOND)) + geom_line()
 
-# compute individual returns
+# compute individual returns, assign first return to first date
 df$R5 <- c(diff(df$P5)/df$P5[-length(df$P5)], NA)
 df$R10 <- c(diff(df$P10)/df$P10[-length(df$P10)], NA)
-tail(df)
+
+# compute weighted portfolio returns
+df$R.Portfolio <- df$R5*df$Weight.P5 + df$R10*df$Weight.P10
+
+# plot(df$DATE, cumsum(df$R.Portfolio))
 
 # plot returns
-df.melt <- melt(df, id="DATE", measure.vars=c("R5", "R10"), variable.name="BOND", value.name="RETURN")
-ggplot(df.melt, aes(x=DATE, y=RETURN, color=BOND)) + geom_line()
-
-
-# compute portfolio returns
-
+df.melt <- melt(df, id="DATE", measure.vars=c("R5", "R10", "R.Portfolio"), variable.name="INSTRUMENT", value.name="RETURN")
+ggplot(df.melt, aes(x=DATE, y=RETURN, color=INSTRUMENT)) + geom_line(alpha=0.5)
 
 # cumulate monthly return
+## Extract year and month
+df$year <- format(df$DATE, "%Y")
+df$year <- as.numeric(df$year)
+df$year_month <- format(df$DATE, "%Y-%m")
+
+# Aggregate returns by year_month
+lookback <- 10
+start_date <- df$DATE[length(df$DATE)] - 365*lookback
+start <- "2014-07-01"
+end <- "2024-06-30"
+
+# TODO: filter lookback period
+
+R.Portfolio.monthly <- aggregate(R.Portfolio ~ year_month, df[df$year], sum)
 
 # build distribution
+hist(R.Portfolio.monthly$R.Portfolio)
 
 # compute VaR
+quantile(R.Portfolio.monthly$R.Portfolio, 0.01)
