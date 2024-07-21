@@ -102,3 +102,35 @@ plot(fit, which=2) # Q-Q plot shows deviation from normal in tails
 # power of test is very high due to high number of observations => use TA-plot
 bptest(fit) # p-value < 2.2e-16
 
+# Compute historical simulation VaR (qtl: 99%, holding: 1month, lookback: 10y) for a portfolio 
+# with 10y Zero Coupon (ZC) bond and 5y ZC bond (each with a face: USD 1m). 
+# Also, compute the contribution to total VaR of each bond
+df.yields <- df[,c("DATE", "DGS5", "DGS10")]
+
+# compute bond prices
+face.val <- 1e6 # face value
+df$P5 <- face.val / (1+df$DGS5/100)^5
+df$P10 <- face.val / (1+df$DGS10/100)^10
+
+# plot bond prices
+df.melt <- melt(df, id="DATE", measure.vars=c("P5", "P10"), variable.name="BOND", value.name="PRICE")
+ggplot(df.melt, aes(x=DATE, y=PRICE, color=BOND)) + geom_line()
+
+# compute individual returns
+df$R5 <- c(diff(df$P5)/df$P5[-length(df$P5)], NA)
+df$R10 <- c(diff(df$P10)/df$P10[-length(df$P10)], NA)
+tail(df)
+
+# plot returns
+df.melt <- melt(df, id="DATE", measure.vars=c("R5", "R10"), variable.name="BOND", value.name="RETURN")
+ggplot(df.melt, aes(x=DATE, y=RETURN, color=BOND)) + geom_line()
+
+
+# compute portfolio returns
+
+
+# cumulate monthly return
+
+# build distribution
+
+# compute VaR
