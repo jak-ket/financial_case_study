@@ -103,7 +103,8 @@ text(var.portfolio*0.7,25, paste0("VaR at 99%", "\n", round(var.portfolio), " US
 
 
 # Contribution of individual bonds to portfolio VaR via Component Value at Risk
-- Before and after approach from https://bazekon.uek.krakow.pl/zeszyty/171217959
+- assumption: component VaR is the desired metric to quantify VaR contribution
+- Before and after approach is used from https://bazekon.uek.krakow.pl/zeszyty/171217959
 - CoVaR(a) = VaR(p) – VaR(p–a) where VaR(p-a) is VaR of portfolio without asset a
 - here, VaR(p-a) = VaR(b) as there are only two bonds a and b
 
