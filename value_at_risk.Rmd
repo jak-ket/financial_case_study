@@ -60,6 +60,7 @@ ggplot(df.melt, aes(x=DATE, y=RETURN, color=INSTRUMENT)) + geom_line(alpha=0.5)
 
 
 # cumulate monthly return
+
 ```{r}
 # define lookback period
 lookback <- 10
@@ -74,10 +75,10 @@ assumption: take non-overlapping time windows to get return observations that ar
 
 
 ```{r}
+df.lookback <- df[(df$DATE>=start_date) & (df$DATE<=end_date),]
 
 # Aggregate $ returns by year_month
-df$year_month <- format(df$DATE, "%Y-%m")
-df.lookback <- df[(df$DATE>=start_date) & (df$DATE<=end_date),]
+df.lookback$year_month <- format(df.lookback$DATE, "%Y-%m")
 R.Portfolio.monthly <- aggregate(R.Portfolio ~ year_month, df.lookback, sum)
 ```
 
@@ -101,17 +102,34 @@ text(var.portfolio*0.7,25, paste0("VaR at 99%", "\n", round(var.portfolio), " US
 ```
 
 
-# Also, compute the contribution to total VaR of each bond
-- marginal VaR
-- component VaR
-```{r}
-# R5.monthly <- aggregate(R5 ~ year_month, df.lookback, sum)
-# var5 <- quantile(R5.monthly$R5, 0.01)
-# 
-# R10.monthly <- aggregate(R10 ~ year_month, df.lookback, sum)
-# var10 <- quantile(R10.monthly$R10, 0.01)
+# Contribution of individual bonds to portfolio VaR via Component Value at Risk
+- Before and after approach from https://bazekon.uek.krakow.pl/zeszyty/171217959
+- CoVaR(a) = VaR(p) – VaR(p–a) where VaR(p-a) is VaR of portfolio without asset a
+- here, VaR(p-a) = VaR(b) as there are only two bonds a and b
 
-# var5+var10
-# var.vector <- c(var5[[1]], var10[[1]])
-# sqrt(t(var.vector) %*% cor(cbind(R5.monthly$R5, R10.monthly$R10)) %*% (var.vector))
+
+Individual VaR
+
+```{r}
+# compute individual VaR
+R5.monthly <- aggregate(R5 ~ year_month, df.lookback, sum)
+var5 <- quantile(R5.monthly$R5, 0.01)
+var5
+
+R10.monthly <- aggregate(R10 ~ year_month, df.lookback, sum)
+var10 <- quantile(R10.monthly$R10, 0.01)
+var10
 ```
+
+
+Component VaR
+
+```{r}
+# compute component VaR
+covar5 <- var.portfolio - var10
+print(paste("Contribution to portfolio VaR for 5y bond is", covar5, "$"))
+
+covar10 <- var.portfolio - var5
+print(paste("Contribution to portfolio VaR for 10y bond is", covar10, "$"))
+```
+

@@ -15,8 +15,8 @@ df$P5 <- face.val / (1+df$DGS5/100)^5
 df$P10 <- face.val / (1+df$DGS10/100)^10
 
 # compute portfolio weights
-# df$Weight.P5 <- df$P5 / (df$P5 + df$P10)
-# df$Weight.P10 <- df$P10 / (df$P5 + df$P10)
+df$Weight.P5 <- df$P5 / (df$P5 + df$P10)
+df$Weight.P10 <- df$P10 / (df$P5 + df$P10)
 
 tail(df)
 
@@ -25,15 +25,15 @@ df.melt <- melt(df, id="DATE", measure.vars=c("P5", "P10"), variable.name="BOND"
 ggplot(df.melt, aes(x=DATE, y=PRICE, color=BOND)) + geom_line()
 
 # compute individual realtive returns, assign first return to first date
-# df$R5 <- c(diff(df$P5)/df$P5[-length(df$P5)], NA)
-# df$R10 <- c(diff(df$P10)/df$P10[-length(df$P10)], NA)
+df$R5.rel <- c(diff(df$P5)/df$P5[-length(df$P5)], NA)
+df$R10.rel <- c(diff(df$P10)/df$P10[-length(df$P10)], NA)
 
 # compute $ returns
 df$R5 <- c(diff(df$P5), NA)
 df$R10 <- c(diff(df$P10), NA)
 
 # compute weighted portfolio returns
-# df$R.Portfolio <- df$R5*df$Weight.P5 + df$R10*df$Weight.P10
+df$R.Portfolio.rel <- df$R5*df$Weight.P5 + df$R10*df$Weight.P10
 
 # compute $ portfolio returns
 df$R.Portfolio <- df$R5 + df$R10
@@ -58,7 +58,7 @@ tail(df)
 df.lookback <- df[(df$DATE>=start_date) & (df$DATE<=end_date),]
 
 # Aggregate $ returns by year_month
-df$year_month <- format(df$DATE, "%Y-%m")
+df.lookback$year_month <- format(df.lookback$DATE, "%Y-%m")
 R.Portfolio.monthly <- aggregate(R.Portfolio ~ year_month, df.lookback, sum)
 
 # Aggregate % returns by year_month
@@ -90,5 +90,18 @@ var10 <- quantile(R10.monthly$R10, 0.01)
 
 var5+var10
 
+# VaR
 var.vector <- c(var5[[1]], var10[[1]])
 sqrt(t(var.vector) %*% cor(cbind(R5.monthly$R5, R10.monthly$R10)) %*% (var.vector))
+
+
+# Contribution of individual bonds to portfolio VaR via Component Value at Risk
+# before and after approach from https://bazekon.uek.krakow.pl/zeszyty/171217959
+# CoVaR(a) = VaR(p) – VaR(p–a) where VaR(p-a) is VaR of portfolio without asset a
+# here, VaR(p-a) = VaR(b) as there are only two bonds a and b
+
+covar5 <- var.portfolio - var10
+covar5
+
+covar10 <- var.portfolio - var5
+covar10
